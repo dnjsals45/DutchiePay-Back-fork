@@ -45,6 +45,23 @@ public class CommerceController {
         return ResponseEntity.ok().body(commerceService.getBuyList(user, filter, category, end, cursor, limit));
     }
 
+    @Operation(summary = "공동구매 리스트 조회 페이징")
+    @GetMapping(value = "/list/page")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<?> getBuyListPage(@RequestParam("filter") String filter,
+                                            @RequestParam(value = "category", required = false) String category,
+                                            @RequestParam("end") int end,
+                                            @RequestParam(value = "page") int page) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        User user = null;
+        if (authentication != null && authentication.getPrincipal() instanceof UserDetailsImpl userDetails) {
+            user = userDetails.getUser();
+        }
+
+        return ResponseEntity.ok().body(commerceService.getBuyListPage(user, filter, category, end, page));
+    }
+
     @Operation(summary = "공동구매 상품 상세 페이지")
     @GetMapping(value = "", params = "buyId")
     @PreAuthorize("permitAll()")
@@ -96,8 +113,8 @@ public class CommerceController {
 
     @PostMapping("/addition")
     @PreAuthorize("permitAll()")
-    public ResponseEntity<Void> addEntity(@RequestBody AddEntityDto addEntityDto) {
-        commerceService.addEntity(addEntityDto);
+    public ResponseEntity<Void> addEntity(@RequestParam("size") int size) {
+        commerceService.addEntity(size);
         return ResponseEntity.ok().build();
     }
 }

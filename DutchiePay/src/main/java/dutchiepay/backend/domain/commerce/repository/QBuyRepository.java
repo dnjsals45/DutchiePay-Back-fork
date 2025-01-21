@@ -14,4 +14,6 @@ public interface QBuyRepository {
     GetBuyListResponseDto getBuyList(User user, String filter, String categoryName, String word, int end, Long cursor, int limit);
 
     List<GetProductReviewResponseDto> getProductReview(Long buyId, Long photo, PageRequest pageable);
+
+    GetBuyListResponseDto getBuyListPage(User user, String filter, String category, String word, int end, int page);
 }

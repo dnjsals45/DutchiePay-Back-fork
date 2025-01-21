@@ -10,10 +10,7 @@ import com.querydsl.core.types.dsl.Expressions;
 import com.querydsl.jpa.JPAExpressions;
 import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
-import dutchiepay.backend.domain.commerce.dto.GetBuyListResponseDto;
-import dutchiepay.backend.domain.commerce.dto.GetBuyResponseDto;
-import dutchiepay.backend.domain.commerce.dto.GetProductReviewResponseDto;
-import dutchiepay.backend.domain.commerce.dto.OrderAndCursorCondition;
+import dutchiepay.backend.domain.commerce.dto.*;
 import dutchiepay.backend.domain.commerce.exception.CommerceErrorCode;
 import dutchiepay.backend.domain.commerce.exception.CommerceException;
 import dutchiepay.backend.entity.*;
@@ -196,6 +193,46 @@ public class QBuyRepositoryImpl implements QBuyRepository{
                 .build();
     }
 
+    @Override
+    public GetBuyListResponseDto getBuyListPage(User user, String filter, String categoryName, String word, int end, int page) {
+        int limit = 16;
+
+        BooleanBuilder conditions = buildBaseConditions(categoryName, end, word);
+        OrderAndSortCondition orderAndSort = buildOrderAndSortCondition(filter);
+
+        List<GetBuyListResponseDto.ProductDto> results = executeMainQuery(user, conditions,
+                orderAndSort.getOrderBy(), page, limit, filter);
+
+        Map<Long, Long> reviewCounts = fetchReviewCounts(results.stream()
+                .map(GetBuyListResponseDto.ProductDto::getBuyId)
+                .collect(Collectors.toList()));
+
+        results.forEach(product ->
+                product.setReviewCount(reviewCounts.getOrDefault(product.getBuyId(), 0L))
+        );
+
+        return GetBuyListResponseDto.builder()
+                .products(results)
+                .cursor(null)
+                .build();
+    }
+
+    private OrderAndSortCondition buildOrderAndSortCondition(String filter) {
+        return switch (filter) {
+            case "like" -> new OrderAndSortCondition(
+                    new OrderSpecifier[]{like.count().desc(), buy.buyId.desc()}
+            );
+            case "discount" -> new OrderAndSortCondition(
+                    new OrderSpecifier[]{product.discountPercent.desc(), buy.buyId.desc()}
+            );
+            case "endDate" -> new OrderAndSortCondition(getEndDateOrderSpecifiers());
+            case "newest" -> new OrderAndSortCondition(
+                    new OrderSpecifier[]{buy.buyId.desc()}
+            );
+            default -> throw new CommerceException(CommerceErrorCode.INVALID_FILTER);
+        };
+    }
+
     private BooleanBuilder buildBaseConditions(String categoryName, int end, String word) {
         BooleanBuilder conditions = new BooleanBuilder();
 
@@ -358,6 +395,39 @@ public class QBuyRepositoryImpl implements QBuyRepository{
 
         return query.orderBy(orderBy)
                 .limit(limit + 1L)
+                .fetch();
+    }
+
+    private List<GetBuyListResponseDto.ProductDto> executeMainQuery(User user, BooleanBuilder conditions,
+                                                                    OrderSpecifier[] orderBy, int page, int size, String filter) {
+        JPAQuery<GetBuyListResponseDto.ProductDto> query = jpaQueryFactory
+                .select(Projections.constructor(GetBuyListResponseDto.ProductDto.class,
+                        buy.buyId,
+                        product.productName,
+                        product.productImg,
+                        product.originalPrice,
+                        product.salePrice,
+                        product.discountPercent,
+                        buy.skeleton,
+                        buy.nowCount,
+                        buy.deadline,
+                        getUserLikeExpression(user)
+                ))
+                .from(buy)
+                .innerJoin(buy.product, product);
+
+        query.where(conditions);
+
+        if ("like".equals(filter)) {
+            query.leftJoin(like).on(like.buy.eq(buy));
+            query.groupBy(buy.buyId, product.productName, product.productImg,
+                    product.originalPrice, product.salePrice, product.discountPercent,
+                    buy.skeleton, buy.nowCount, buy.deadline);
+        }
+
+        return query.orderBy(orderBy)
+                .offset((long) page * size)
+                .limit(size)
                 .fetch();
     }
 

@@ -75,6 +75,14 @@ dependencies {
     runtimeOnly 'com.mysql:mysql-connector-j'
 
     implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.17.2'
+
+    // shed lock
+    implementation 'net.javacrumbs.shedlock:shedlock-spring:6.2.0'
+    implementation 'net.javacrumbs.shedlock:shedlock-provider-jdbc-template:6.2.0'
+
+    // Spring retry
+    implementation 'org.springframework.retry:spring-retry'
+    implementation 'org.springframework.boot:spring-boot-starter-aop'
 }
 
 tasks.named('test') {

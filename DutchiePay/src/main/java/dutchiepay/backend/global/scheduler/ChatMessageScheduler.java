@@ -4,6 +4,7 @@ import dutchiepay.backend.domain.chat.dto.MessageResponse;
 import dutchiepay.backend.domain.chat.repository.MessageJdbcRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.javacrumbs.shedlock.spring.annotation.SchedulerLock;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -27,6 +28,7 @@ public class ChatMessageScheduler {
     private static final int RETENTION_DAYS = 6;
 
     @Scheduled(cron = "0 0 3 * * ?")
+    @SchedulerLock(name = "syncMessageToDB", lockAtMostFor = "30m")
     @Transactional
     public void syncMessageToDB() {
         log.info("채팅 메시지 동기화 스케쥴링 시작");
@@ -62,6 +64,7 @@ public class ChatMessageScheduler {
     }
 
     @Scheduled(cron = "0 0 4 * * ?")
+    @SchedulerLock(name = "cleanupOldMessages", lockAtMostFor = "30m")
     public void cleanupOldMessages() {
         log.info("Redis 메시지 정리 스케줄링 시작");
         String pattern = CHAT_KEY_PREFIX + "*" + MESSAGES_SUFFIX + "*";

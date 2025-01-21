@@ -3,10 +3,7 @@ package dutchiepay.backend.domain.commerce.service;
 import dutchiepay.backend.domain.commerce.dto.*;
 import dutchiepay.backend.domain.commerce.exception.CommerceErrorCode;
 import dutchiepay.backend.domain.commerce.exception.CommerceException;
-import dutchiepay.backend.domain.commerce.repository.BuyCategoryRepository;
-import dutchiepay.backend.domain.commerce.repository.BuyRepository;
-import dutchiepay.backend.domain.commerce.repository.CategoryRepository;
-import dutchiepay.backend.domain.commerce.repository.StoreRepository;
+import dutchiepay.backend.domain.commerce.repository.*;
 import dutchiepay.backend.domain.order.repository.AskRepository;
 import dutchiepay.backend.domain.order.repository.LikeRepository;
 import dutchiepay.backend.domain.order.repository.ProductRepository;
@@ -14,6 +11,7 @@ import dutchiepay.backend.entity.*;
 import dutchiepay.backend.global.security.UserDetailsImpl;
 import lombok.AccessLevel;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -22,21 +20,23 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 @Transactional(readOnly = true)
 @RequiredArgsConstructor(access = AccessLevel.PROTECTED)
+@Slf4j
 public class CommerceService {
 
     private final BuyRepository buyRepository;
     private final LikeRepository likeRepository;
     private final AskRepository askRepository;
     private final ProductRepository productRepository;
-    private final StoreRepository storeRepository;
-    private final CategoryRepository categoryRepository;
-    private final BuyCategoryRepository buyCategoryRepository;
+    private final StoreJdbcRepository storeJdbcRepository;
+    private final ProductJdbcRepository productJdbcRepository;
+    private final BuyJdbcRepository buyJdbcRepository;
 
     /**
      * 상품 좋아요
@@ -85,6 +85,10 @@ public class CommerceService {
         return buyRepository.getBuyList(user, filter, category, null, end, cursor, limit);
     }
 
+    public GetBuyListResponseDto getBuyListPage(User user, String filter, String category, int end, int page) {
+        return buyRepository.getBuyListPage(user, filter, category, null, end, page - 1);
+    }
+
     public List<GetProductReviewResponseDto> getProductReview(Long buyId, Long photo, Long page, Long limit) {
         if (!buyRepository.existsById(buyId)) {
             throw new CommerceException(CommerceErrorCode.CANNOT_FOUND_PRODUCT);
@@ -106,41 +110,52 @@ public class CommerceService {
     }
 
     @Transactional
-    public void addEntity(AddEntityDto addEntityDto) {
-        Store store = storeRepository.findByStoreName(addEntityDto.getStoreName());
-        if (store == null) store = storeRepository.save(Store.builder()
-                        .storeName(addEntityDto.getStoreName())
-                        .contactNumber(addEntityDto.getContactNumber())
-                        .representative(addEntityDto.getRepresentative())
-                        .storeAddress(addEntityDto.getStoreAddress()).build());
-
-        Product product = productRepository.save(Product.builder()
-                .store(store)
-                .productName(addEntityDto.getProductName())
-                .detailImg(addEntityDto.getDetailImg())
-                .originalPrice(addEntityDto.getOriginalPrice())
-                .salePrice(addEntityDto.getSalePrice())
-                .discountPercent(addEntityDto.getDiscountPercent())
-                .productImg(addEntityDto.getProductImg()).build());
-
-        Buy buy = buyRepository.save(Buy.builder()
-                .product(product)
-                .title(addEntityDto.getProductName())
-                .deadline(addEntityDto.getDeadline())
-                .skeleton(addEntityDto.getSkeleton())
-                .nowCount(0)
-                .tags(addEntityDto.getTag())
-                .build());
-
-        for (String c : addEntityDto.getCategory()) {
-            Category category = categoryRepository.findByName(c);
-            if (category == null)
-                category = categoryRepository.save(Category.builder().name(c).build());
-
-            buyCategoryRepository.save(BuyCategory.builder()
-                    .buy(buy)
-                    .category(category)
+    public void addEntity(int size) {
+        List<Store> storeList = new ArrayList<>();
+        for (int i = 0; i < size; i++) {
+            storeList.add(Store.builder()
+                    .storeName("store" + i)
+                    .contactNumber("01012345678")
+                    .representative("representative" + i)
+                    .storeAddress("address" + i)
                     .build());
         }
+
+        log.info("11111111111");
+        storeList = storeJdbcRepository.bulkInsert(storeList);
+        log.info("22222222222");
+
+        List<Product> productList = new ArrayList<>();
+        for (int i = 0; i < size; i++) {
+            productList.add(Product.builder()
+                    .store(storeList.get(i))
+                    .productName("product" + i)
+                    .detailImg("https://dutchiepay-image.s3.amazonaws.com/43500864-ae0a-41c9-a4ea-ce425725eba1강아지.png")
+                    .originalPrice(10000)
+                    .salePrice(8000)
+                    .discountPercent(20)
+                    .productImg("https://dutchiepay-image.s3.amazonaws.com/43500864-ae0a-41c9-a4ea-ce425725eba1강아지.png")
+                    .build());
+        }
+
+        log.info("33333333333");
+        productList = productJdbcRepository.bulkInsert(productList);
+        log.info("44444444444");
+
+        List<Buy> buyList = new ArrayList<>();
+        for (int i = 0; i < size; i++) {
+            buyList.add(Buy.builder()
+                    .product(productList.get(i))
+                    .title("title" + i)
+                    .deadline(LocalDate.now().plusDays(7))
+                    .skeleton(10)
+                    .nowCount(0)
+                    .tags("tag" + i)
+                    .build());
+        }
+
+        log.info("55555555555");
+        buyJdbcRepository.bulkInsert(buyList);
+        log.info("66666666666");
     }
 }
