@@ -121,9 +121,7 @@ public class CommerceService {
                     .build());
         }
 
-        log.info("11111111111");
         storeList = storeJdbcRepository.bulkInsert(storeList);
-        log.info("22222222222");
 
         List<Product> productList = new ArrayList<>();
         for (int i = 0; i < size; i++) {
@@ -138,9 +136,7 @@ public class CommerceService {
                     .build());
         }
 
-        log.info("33333333333");
         productList = productJdbcRepository.bulkInsert(productList);
-        log.info("44444444444");
 
         List<Buy> buyList = new ArrayList<>();
         for (int i = 0; i < size; i++) {

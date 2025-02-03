@@ -24,7 +24,9 @@ public enum PaymentErrorCode {
     PORTONE_CANCEL_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "결제 취소에 실패하였습니다."),
     INVALID_KAKAO_APPROVE_RESPONSE(HttpStatus.INTERNAL_SERVER_ERROR, "카카오페이 결제 승인 응답이 유효하지 않습니다."),
     ERROR_KAKAOPAY_STATUS(HttpStatus.INTERNAL_SERVER_ERROR, "카카오페이 결제 상태를 확인할 수 없습니다."),
-    ERROR_KAKAOPAY_CANCEL(HttpStatus.INTERNAL_SERVER_ERROR, "카카오페이 결제 취소 중 오류가 발생하였습니다.");
+    ERROR_KAKAOPAY_CANCEL(HttpStatus.INTERNAL_SERVER_ERROR, "카카오페이 결제 취소 중 오류가 발생하였습니다."),
+    PAYMENT_IN_PROGRESS(HttpStatus.INTERNAL_SERVER_ERROR, "진행중인 거래가 있습니다."),
+    EXTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "외부 서버 오류가 발생하였습니다."),;
 
     private final HttpStatus httpStatus;
     private final String message;

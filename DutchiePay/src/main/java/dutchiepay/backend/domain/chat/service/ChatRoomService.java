@@ -4,6 +4,7 @@ import dutchiepay.backend.domain.chat.dto.*;
 import dutchiepay.backend.domain.chat.exception.ChatErrorCode;
 import dutchiepay.backend.domain.chat.exception.ChatException;
 import dutchiepay.backend.domain.chat.repository.ChatRoomRepository;
+import dutchiepay.backend.domain.chat.repository.MessageJdbcRepository;
 import dutchiepay.backend.domain.chat.repository.MessageRepository;
 import dutchiepay.backend.domain.community.service.MartService;
 import dutchiepay.backend.domain.community.service.PurchaseService;
@@ -38,6 +39,7 @@ public class ChatRoomService {
     private final RedisMessageService redisMessageService;
 
     private static final String CHAT_ROOM_PREFIX = "/sub/chat/";
+    private final MessageJdbcRepository messageJdbcRepository;
 
     /**
      * 게시글에 연결된 채팅방에 참여한다.
@@ -288,6 +290,34 @@ public class ChatRoomService {
         return chatRoomRepository.findChatRoomMessages(chatRoomId, cursorDate, cursorMessageId, limit);
     }
 
+    public GetMessageListResponseDto getChatRoomMessagesFromDB(Long chatRoomId, String cursor, Long limit) {
+        String cursorDate;
+        Long cursorMessageId = null;
+
+        if (cursor == null) {
+            cursorDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        } else {
+            cursorDate = cursor.substring(0, 8);
+            cursorMessageId = Long.parseLong(cursor.substring(8)) != 0 ? Long.parseLong(cursor.substring(8)) : null;
+        }
+
+        return chatRoomRepository.findChatRoomMessages(chatRoomId, cursorDate, cursorMessageId, limit);
+    }
+
+    public GetMessageListResponseDto getChatRoomMessagesFromRedis(Long chatRoomId, String cursor, Long limit) {
+        String cursorDate;
+        Long cursorMessageId = null;
+
+        if (cursor == null) {
+            cursorDate = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+        } else {
+            cursorDate = cursor.substring(0, 8);
+            cursorMessageId = Long.parseLong(cursor.substring(8)) != 0 ? Long.parseLong(cursor.substring(8)) : null;
+        }
+
+        return redisMessageService.getMessageFromMemory(chatRoomId, cursorDate, cursorMessageId, limit);
+    }
+
     public void checkCursorId(Long chatRoomId, Long userId) {
         Long cursor = messageRepository.findCursorId(chatRoomId, userId);
 
@@ -315,5 +345,28 @@ public class ChatRoomService {
         }
 
         userChatroomService.updateLastMessageToAllSubscribers(userIds, Long.parseLong(chatRoomId), messageId);
+    }
+
+    public void saveChatMessageToDB(Long chatRoomId, int size) {
+        List<Message> messages = new ArrayList<>();
+        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
+                .orElseThrow(() -> new ChatException(ChatErrorCode.INVALID_CHAT));
+
+        for (int i = 0; i < size; i++) {
+            messages.add(Message.builder()
+                            .chatroom(chatRoom)
+                            .type("text")
+                            .senderId(1L)
+                            .content("테스트 메시지" + i)
+                            .date(LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd")))
+                            .time("00:0" + i)
+                            .build());
+        }
+
+        messages = messageJdbcRepository.bulkInsert(messages, chatRoomId);
+
+        for (Message message : messages) {
+            redisMessageService.saveMessage(chatRoomId.toString(), message);
+        }
     }
 }

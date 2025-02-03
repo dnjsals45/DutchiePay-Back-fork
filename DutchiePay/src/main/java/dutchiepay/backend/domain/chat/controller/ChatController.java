@@ -6,6 +6,7 @@ import dutchiepay.backend.domain.chat.dto.KickUserRequestDto;
 import dutchiepay.backend.domain.chat.service.ChatRoomService;
 import dutchiepay.backend.global.security.UserDetailsImpl;
 import io.swagger.v3.oas.annotations.Operation;
+import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -70,10 +71,38 @@ public class ChatController {
 
     @Operation(summary = "채팅방 메시지 목록 조회")
     @GetMapping("/message")
-    @PreAuthorize("isAuthenticated()")
+//    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("permitAll()")
     public ResponseEntity<?> getChatRoomMessages(@RequestParam(value = "chatRoomId") Long chatRoomId,
                                                  @RequestParam(value = "cursor", required = false) String cursor,
                                                  @RequestParam(value = "limit") Long limit) {
         return ResponseEntity.ok(chatroomService.getChatRoomMessages(chatRoomId, cursor, limit));
+    }
+
+    @Operation(summary = "채팅 메시지 더미데이터 생성")
+    @GetMapping("/save/test")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<?> saveChatMessageToDB(@RequestParam(value = "chatRoomId") Long chatRoomId,
+                                                 @RequestParam(value = "size") int size) {
+        chatroomService.saveChatMessageToDB(chatRoomId, size);
+        return ResponseEntity.ok().build();
+    }
+
+    @Operation(summary = "DB에서 데이터 조회 테스트")
+    @GetMapping("/from/db")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<?> getChatRoomMessagesFromDB(@RequestParam(value = "chatRoomId") Long chatRoomId,
+                                                       @RequestParam(value = "cursor", required = false) String cursor,
+                                                       @RequestParam(value = "limit") Long limit) {
+        return ResponseEntity.ok(chatroomService.getChatRoomMessagesFromDB(chatRoomId, cursor, limit));
+    }
+
+    @Operation(summary = "Redis에서 데이터 조회 테스트")
+    @GetMapping("/from/redis")
+    @PreAuthorize("permitAll()")
+    public ResponseEntity<?> getChatRoomMessagesFromRedis(@RequestParam(value = "chatRoomId") Long chatRoomId,
+                                                          @RequestParam(value = "cursor", required = false) String cursor,
+                                                          @RequestParam(value = "limit") Long limit) {
+        return ResponseEntity.ok(chatroomService.getChatRoomMessagesFromRedis(chatRoomId, cursor, limit));
     }
 }
