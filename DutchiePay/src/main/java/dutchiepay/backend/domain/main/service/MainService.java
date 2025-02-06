@@ -7,6 +7,8 @@ import dutchiepay.backend.domain.main.repository.QMainRepositoryImpl;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.util.List;
 
 import static dutchiepay.backend.entity.QBuy.buy;
@@ -58,5 +60,24 @@ public class MainService {
                 .toList();
 
         return MainResponseDto.builder().newProducts(newProducts).recommends(recommends).nowHot(nowHot).build();
+    }
+
+    public String getHostName() {
+        String hostname = System.getenv("HOSTNAME");
+        if (hostname != null) return hostname;
+
+        String lineStr = "";
+        try {
+            Process process = Runtime.getRuntime().exec("hostname");
+            BufferedReader br = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            while((lineStr = br.readLine()) != null ) {
+                hostname = lineStr;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            hostname = "";
+        }
+
+        return hostname;
     }
 }
