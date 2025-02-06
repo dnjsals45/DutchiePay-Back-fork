@@ -46,7 +46,7 @@ spring:
     sender: ${SMS_SENDER}
 
   datasource:
-    driver-class-name: org.mariadb.jdbc.Driver
+    driver-class-name: com.mysql.cj.jdbc.Driver
     url: ${DB_URL}
     username: ${DB_USER}
     password: ${DB_PASSWORD}
@@ -119,3 +119,9 @@ payment:
   portone:
     secret: ${PORTONE_API_SECRET}
     store-id: ${PORTONE_STORE_ID}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
